@@ -1,9 +1,8 @@
-local Lighting = game:GetService("Lighting")
-local workspace = game:GetService("Workspace")
 local player = game.Players.LocalPlayer
+local workspace = game:GetService("Workspace")
 
 local gui = Instance.new("ScreenGui")
-gui.Name = "OllieInstakill"
+gui.Name = "BoneZoneSpam"
 gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
@@ -12,7 +11,7 @@ frame.Size = UDim2.new(0, 200, 0, 100)
 frame.Position = UDim2.new(0.1, 0, 0.2, 0)
 frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 frame.BorderSizePixel = 2
-frame.BorderColor3 = Color3.fromRGB(255, 0, 0)
+frame.BorderColor3 = Color3.fromRGB(0, 255, 255)
 frame.Active = true
 frame.Draggable = true
 frame.Parent = gui
@@ -20,8 +19,8 @@ frame.Parent = gui
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0.3, 0)
 title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-title.Text = "INSTAKILL | olliE"
-title.TextColor3 = Color3.fromRGB(255, 0, 0)
+title.Text = "Bone Zone Spam | olliE"
+title.TextColor3 = Color3.fromRGB(0, 255, 255)
 title.Font = Enum.Font.Code
 title.TextSize = 14
 title.Parent = frame
@@ -63,28 +62,32 @@ toggleBtn.MouseButton1Click:Connect(function()
                 if boss then
                     local hrp = boss:FindFirstChild("HumanoidRootPart")
                     if hrp then
-                        local pos = hrp.Position
-                        
-                        -- Ищем все ремоуты в Lighting и спамим их
-                        for _, obj in ipairs(Lighting:GetDescendants()) do
-                            if obj:IsA("RemoteEvent") then
-                                pcall(function()
-                                    obj:FireServer(pos.X, pos.Y, pos.Z)
-                                end)
-                            end
+                        local char = player.Character
+                        local tool = char and char:FindFirstChild("Bone Zone")
+                        if not tool then
+                            local backpack = player:FindFirstChild("Backpack")
+                            tool = backpack and backpack:FindFirstChild("Bone Zone")
+                            if tool then tool.Parent = char end
                         end
                         
-                        -- Ищем ремоуты в Workspace (на всякий случай)
-                        for _, obj in ipairs(workspace:GetDescendants()) do
-                            if obj:IsA("RemoteEvent") and obj.Name:find("Remote") then
+                        if tool and tool.Parent == char then
+                            local remote = tool:FindFirstChild("RemoteEvent")
+                            if remote then
                                 pcall(function()
-                                    obj:FireServer(pos.X, pos.Y, pos.Z)
+                                    -- Пытаемся отправить координаты босса
+                                    remote:FireServer(hrp.Position.X, hrp.Position.Y, hrp.Position.Z)
                                 end)
                             end
+                            -- Если ремоута нет, просто активируем инструмент, пока камера смотрит на босса
+                            local camera = workspace.CurrentCamera
+                            camera.CFrame = CFrame.new(camera.CFrame.Position, hrp.Position)
+                            pcall(function()
+                                tool:Activate()
+                            end)
                         end
                     end
                 end
-                task.wait(0.1)
+                task.wait(0.2)
             end
         end)
     else
