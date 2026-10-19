@@ -1,59 +1,49 @@
 local player = game.Players.LocalPlayer
-local gui = Instance.new("ScreenGui")
-gui.Name = "SpyGui"
-gui.ResetOnSpawn = false
-gui.Parent = player:WaitForChild("PlayerGui")
+local workspace = game:GetService("Workspace")
 
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0.8, 0, 0.4, 0)
-frame.Position = UDim2.new(0.1, 0, 0.05, 0)
-frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-frame.BorderSizePixel = 2
-frame.BorderColor3 = Color3.fromRGB(255, 0, 0)
-frame.Parent = gui
+-- Находим инструмент игрока
+local backpack = player:WaitForChild("Backpack")
+local character = player.Character or player.CharacterAdded:Wait()
 
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0.15, 0)
-title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-title.Text = "Remote Spy | olliE"
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.Parent = frame
-
-local scroll = Instance.new("ScrollingFrame")
-scroll.Size = UDim2.new(1, -10, 0.85, -10)
-scroll.Position = UDim2.new(0, 5, 0.15, 5)
-scroll.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-scroll.Parent = frame
-
-local layout = Instance.new("UIListLayout")
-layout.Parent = scroll
-
-local function addLog(text)
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1, 0, 0, 20)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = text
-    lbl.TextColor3 = Color3.fromRGB(0, 255, 0)
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Font = Enum.Font.Code
-    lbl.TextSize = 12
-    lbl.Parent = scroll
-    layout:ApplyLayout()
-    scroll.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y)
+local function getGasterBlaster()
+    local tool = character:FindFirstChild("Gaster Blaster")
+    if not tool then
+        tool = backpack:FindFirstChild("Gaster Blaster")
+    end
+    return tool
 end
 
--- Hook the FireServer method
-local oldNamecall
-oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-    local method = getnamecallmethod()
-    if method == "FireServer" then
-        local args = {...}
-        local argStr = ""
-        for i, v in ipairs(args) do
-            argStr = argStr .. tostring(v) .. ", "
+-- Ищем босса (The Guy или любого с Humanoid)
+local function getBoss()
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") and obj ~= character then
+            if obj.Name:lower():find("guy") or obj.Name:lower():find("sans") or obj.Name:lower():find("nightmare") then
+                return obj
+            end
         end
-        addLog("Sent: " .. self:GetFullName() .. " | Args: " .. argStr)
     end
-    return oldNamecall(self, ...)
+    return nil
+end
+
+-- Спам
+task.spawn(function()
+    while task.wait(0.1) do -- 10 раз в секунду
+        local boss = getBoss()
+        local tool = getGasterBlaster()
+        
+        if boss and tool then
+            local hrp = boss:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                local pos = hrp.Position
+                
+                -- Находим RemoteEvent внутри инструмента
+                local remote = tool:FindFirstChild("RemoteEvent")
+                if remote and remote:IsA("RemoteEvent") then
+                    pcall(function()
+                        remote:FireServer(pos.X, pos.Y, pos.Z)
+                    end)
+                end
+            end
+        end
+    end
 end)
