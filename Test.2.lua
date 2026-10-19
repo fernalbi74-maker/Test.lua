@@ -1,64 +1,79 @@
-local Lighting = game:GetService("Lighting")
-local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
+local player = game.Players.LocalPlayer
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local ESP_Folder = Instance.new("Folder")
-ESP_Folder.Name = "OllieESP"
-ESP_Folder.Parent = game.CoreGui
+local gui = Instance.new("ScreenGui")
+gui.Name = "SourceReader"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
 
-local function createESP(model)
-    if model:FindFirstChild("OllieHighlight") then return end
-    
-    local highlight = Instance.new("Highlight")
-    highlight.Name = "OllieHighlight"
-    highlight.FillColor = Color3.fromRGB(255, 0, 0)
-    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-    highlight.FillTransparency = 0.5
-    highlight.OutlineTransparency = 0
-    highlight.Parent = model
-    
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "OllieName"
-    billboard.Size = UDim2.new(0, 200, 0, 50)
-    billboard.StudsOffset = Vector3.new(0, 3, 0)
-    billboard.AlwaysOnTop = true
-    billboard.Parent = model:FindFirstChild("Head") or model:FindFirstChild("HumanoidRootPart") or model
-    
-    local text = Instance.new("TextLabel")
-    text.Size = UDim2.new(1, 0, 1, 0)
-    text.BackgroundTransparency = 1
-    text.Text = model.Name
-    text.TextColor3 = Color3.fromRGB(255, 50, 50)
-    text.TextStrokeTransparency = 0
-    text.Font = Enum.Font.Code
-    text.TextSize = 16
-    text.Parent = billboard
-    
-    local humanoid = model:FindFirstChildOfClass("Humanoid") or model:FindFirstChild("Humanoid")
-    if humanoid then
-        humanoid.HealthChanged:Connect(function(hp)
-            text.Text = model.Name .. " [" .. math.floor(hp) .. "/" .. math.floor(humanoid.MaxHealth) .. "]"
-        end)
-        text.Text = model.Name .. " [" .. math.floor(humanoid.Health) .. "/" .. math.floor(humanoid.MaxHealth) .. "]"
-    end
-end
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0.95, 0, 0.95, 0)
+frame.Position = UDim2.new(0.025, 0, 0.025, 0)
+frame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+frame.BorderSizePixel = 2
+frame.BorderColor3 = Color3.fromRGB(0, 255, 255)
+frame.Parent = gui
 
-local function scan()
-    for _, obj in ipairs(Lighting:GetChildren()) do
-        if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") then
-            if not obj:FindFirstChild("OllieHighlight") then
-                createESP(obj)
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0.05, 0)
+title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+title.Text = "HitboxUtil Source | olliE"
+title.TextColor3 = Color3.fromRGB(0, 255, 255)
+title.Font = Enum.Font.Code
+title.TextSize = 14
+title.Parent = frame
+
+local scroll = Instance.new("ScrollingFrame")
+scroll.Size = UDim2.new(1, -10, 0.95, -10)
+scroll.Position = UDim2.new(0, 5, 0.05, 5)
+scroll.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+scroll.BorderSizePixel = 0
+scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+scroll.ScrollBarThickness = 6
+scroll.Parent = frame
+
+local box = Instance.new("TextBox")
+box.Size = UDim2.new(1, 0, 0, 2000)
+box.BackgroundTransparency = 1
+box.TextColor3 = Color3.fromRGB(200, 255, 200)
+box.MultiLine = true
+box.TextWrapped = true
+box.TextXAlignment = Enum.TextXAlignment.Left
+box.TextYAlignment = Enum.TextYAlignment.Top
+box.ClearTextOnFocus = false
+box.Font = Enum.Font.Code
+box.TextSize = 12
+box.Parent = scroll
+
+box:GetPropertyChangedSignal("TextBounds"):Connect(function()
+    scroll.CanvasSize = UDim2.new(0, 0, 0, box.TextBounds.Y + 20)
+end)
+
+local function getModuleSource(moduleName)
+    local module = ReplicatedStorage:FindFirstChild(moduleName)
+    if not module then return "[ERROR] " .. moduleName .. " not found in ReplicatedStorage." end
+    
+    local success, source = pcall(function() return module.Source end)
+    if success and source and #source > 0 then
+        return source
+    else
+        -- Try to require and list functions if Source is hidden
+        local reqSuccess, reqResult = pcall(function() return require(module) end)
+        if reqSuccess and type(reqResult) == "table" then
+            local funcs = {}
+            for k, v in pairs(reqResult) do
+                table.insert(funcs, tostring(k) .. " (" .. type(v) .. ")")
             end
+            return "[Source hidden] Module functions:\n" .. table.concat(funcs, "\n")
+        else
+            return "[Source hidden and require failed]"
         end
     end
 end
 
--- Run scan every second to catch newly spawned bosses
-task.spawn(function()
-    while task.wait(1) do
-        pcall(scan)
-    end
-end)
+local output = ""
+output = output .. "=== HitboxUtil ===\n" .. getModuleSource("HitboxUtil") .. "\n\n"
+output = output .. "=== DefenseUtil ===\n" .. getModuleSource("DefenseUtil") .. "\n\n"
 
--- Initial scan
-pcall(scan)
+box.Text = output
+scroll.CanvasSize = UDim2.new(0, 0, 0, box.TextBounds.Y + 20)
