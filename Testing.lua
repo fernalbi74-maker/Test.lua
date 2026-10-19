@@ -1,13 +1,14 @@
 local player = game.Players.LocalPlayer
 local workspace = game:GetService("Workspace")
+local camera = workspace.CurrentCamera
 
 local gui = Instance.new("ScreenGui")
-gui.Name = "OllieForceHit"
+gui.Name = "OlliePrecision"
 gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 200, 0, 80)
+frame.Size = UDim2.new(0, 200, 0, 100)
 frame.Position = UDim2.new(0.1, 0, 0.2, 0)
 frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 frame.BorderSizePixel = 2
@@ -17,9 +18,9 @@ frame.Draggable = true
 frame.Parent = gui
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0.4, 0)
+title.Size = UDim2.new(1, 0, 0.3, 0)
 title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-title.Text = "Force Hit | olliE"
+title.Text = "Precision Aim | olliE"
 title.TextColor3 = Color3.fromRGB(0, 255, 255)
 title.Font = Enum.Font.Code
 title.TextSize = 14
@@ -27,7 +28,7 @@ title.Parent = frame
 
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Size = UDim2.new(0.9, 0, 0.4, 0)
-toggleBtn.Position = UDim2.new(0.05, 0, 0.5, 0)
+toggleBtn.Position = UDim2.new(0.05, 0, 0.4, 0)
 toggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 toggleBtn.Text = "OFF"
 toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -35,7 +36,7 @@ toggleBtn.Font = Enum.Font.Code
 toggleBtn.TextSize = 16
 toggleBtn.Parent = frame
 
-local isForcing = false
+local isAiming = false
 
 local function getBoss()
     local char = player.Character
@@ -50,38 +51,39 @@ local function getBoss()
     return nil
 end
 
--- Хук на имя функции
-local oldNamecall
-oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-    local method = getnamecallmethod()
-    
-    if method == "FireServer" and isForcing then
-        local args = {...}
-        
-        -- Проверяем, что это выстрел из бластера (3 аргумента, все числа)
-        if #args == 3 and type(args[1]) == "number" and type(args[2]) == "number" and type(args[3]) == "number" then
-            local boss = getBoss()
-            if boss then
-                local hrp = boss:FindFirstChild("HumanoidRootPart") or boss:FindFirstChild("Head")
-                if hrp then
-                    local pos = hrp.Position
-                    -- Подменяем аргументы на координаты босса
-                    return oldNamecall(self, pos.X, pos.Y, pos.Z)
-                end
-            end
-        end
-    end
-    
-    return oldNamecall(self, ...)
-end)
-
 toggleBtn.MouseButton1Click:Connect(function()
-    isForcing = not isForcing
-    if isForcing then
+    isAiming = not isAiming
+    if isAiming then
         toggleBtn.Text = "ON"
         toggleBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
     else
         toggleBtn.Text = "OFF"
         toggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    end
+end)
+
+-- Слушаем, когда ты сам активируешь инструмент
+game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
+    if not isAiming or gameProcessed then return end
+    
+    -- Если ты нажал на экран (или кнопку)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        local char = player.Character
+        local tool = char and char:FindFirstChild("Gaster Blaster")
+        if not tool then
+            local backpack = player:FindFirstChild("Backpack")
+            tool = backpack and backpack:FindFirstChild("Gaster Blaster")
+        end
+        
+        if tool then
+            local boss = getBoss()
+            if boss then
+                local hrp = boss:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    -- Мгновенно наводим камеру на босса перед выстрелом
+                    camera.CFrame = CFrame.new(camera.CFrame.Position, hrp.Position)
+                end
+            end
+        end
     end
 end)
