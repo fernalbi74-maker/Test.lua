@@ -2,7 +2,7 @@ local player = game.Players.LocalPlayer
 local workspace = game:GetService("Workspace")
 
 local gui = Instance.new("ScreenGui")
-gui.Name = "CloneZone"
+gui.Name = "CooldownBypass"
 gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
@@ -19,7 +19,7 @@ frame.Parent = gui
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0.3, 0)
 title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-title.Text = "Clone Zone | olliE"
+title.Text = "Cooldown Bypass | olliE"
 title.TextColor3 = Color3.fromRGB(0, 255, 255)
 title.Font = Enum.Font.Code
 title.TextSize = 14
@@ -63,35 +63,26 @@ toggleBtn.MouseButton1Click:Connect(function()
                     local hrp = boss:FindFirstChild("HumanoidRootPart")
                     if hrp then
                         local char = player.Character
-                        local backpack = player:FindFirstChild("Backpack")
-                        
-                        -- Находим оригинальный Bone Zone
-                        local original = char and char:FindFirstChild("Bone Zone")
-                        if not original then
-                            original = backpack and backpack:FindFirstChild("Bone Zone")
+                        local tool = char and char:FindFirstChild("Bone Zone")
+                        if not tool then
+                            local backpack = player:FindFirstChild("Backpack")
+                            tool = backpack and backpack:FindFirstChild("Bone Zone")
+                            if tool then tool.Parent = char end
                         end
                         
-                        if original then
-                            -- Клонируем инструмент
-                            local clone = original:Clone()
-                            clone.Parent = char
-                            
-                            -- Ждем кадр, чтобы он загрузился
-                            task.wait()
-                            
-                            -- Активируем (спавним зону)
-                            pcall(function()
-                                clone:Activate()
-                            end)
-                            
-                            -- Удаляем клон, чтобы не забивать память
-                            task.delay(0.1, function()
-                                if clone then clone:Destroy() end
-                            end)
+                        if tool and tool.Parent == char then
+                            -- Находим RemoteEvent внутри Bone Zone
+                            local remote = tool:FindFirstChild("RemoteEvent")
+                            if remote then
+                                -- Отправляем координаты напрямую (обходим LocalScript с кулдауном)
+                                pcall(function()
+                                    remote:FireServer(hrp.Position.X, hrp.Position.Y, hrp.Position.Z)
+                                end)
+                            end
                         end
                     end
                 end
-                task.wait(0.3) -- Интервал между клонами
+                task.wait(0.15) -- Пытаемся стрелять быстрее кулдауна
             end
         end)
     else
