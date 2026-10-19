@@ -1,10 +1,9 @@
 local player = game.Players.LocalPlayer
 local workspace = game:GetService("Workspace")
 local camera = workspace.CurrentCamera
-local runService = game:GetService("RunService")
 
 local gui = Instance.new("ScreenGui")
-gui.Name = "OllieSniper"
+gui.Name = "OllieLockOn"
 gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
@@ -21,7 +20,7 @@ frame.Parent = gui
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0.25, 0)
 title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-title.Text = "Sniper Auto-Aim | olliE"
+title.Text = "Lock-On Sniper | olliE"
 title.TextColor3 = Color3.fromRGB(0, 255, 255)
 title.Font = Enum.Font.Code
 title.TextSize = 14
@@ -37,8 +36,8 @@ toggleBtn.Font = Enum.Font.Code
 toggleBtn.TextSize = 16
 toggleBtn.Parent = frame
 
-local isAiming = false
-local aimConnection = nil
+local isRunning = false
+local shootTask = nil
 
 local function getBoss()
     local char = player.Character
@@ -54,34 +53,46 @@ local function getBoss()
 end
 
 toggleBtn.MouseButton1Click:Connect(function()
-    isAiming = not isAiming
-    if isAiming then
+    isRunning = not isRunning
+    if isRunning then
         toggleBtn.Text = "ON"
         toggleBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
         
-        if aimConnection then aimConnection:Disconnect() end
-        aimConnection = runService.RenderStepped:Connect(function()
-            local boss = getBoss()
-            if boss then
-                local hrp = boss:FindFirstChild("HumanoidRootPart")
-                if hrp and camera then
-                    -- Предсказываем позицию (упреждение)
-                    local velocity = hrp.AssemblyLinearVelocity
-                    local distance = (hrp.Position - camera.CFrame.Position).Magnitude
-                    local travelTime = distance / 300 -- Примерная скорость снаряда
-                    local predictedPos = hrp.Position + (velocity * travelTime)
-                    
-                    -- Наводим камеру на предсказанную точку
-                    camera.CFrame = CFrame.new(camera.CFrame.Position, predictedPos)
+        if shootTask then task.cancel(shootTask) end
+        shootTask = task.spawn(function()
+            while isRunning do
+                local boss = getBoss()
+                if boss then
+                    local hrp = boss:FindFirstChild("HumanoidRootPart") or boss:FindFirstChild("Head")
+                    if hrp then
+                        -- 1. Наводим камеру ТОЧНО на хитбокс
+                        camera.CFrame = CFrame.new(camera.CFrame.Position, hrp.Position)
+                        
+                        -- 2. Находим и активируем инструмент
+                        local char = player.Character
+                        local tool = char and char:FindFirstChild("Gaster Blaster")
+                        if not tool then
+                            local backpack = player:FindFirstChild("Backpack")
+                            tool = backpack and backpack:FindFirstChild("Gaster Blaster")
+                            if tool then tool.Parent = char end
+                        end
+                        
+                        if tool and tool.Parent == char then
+                            pcall(function()
+                                tool:Activate()
+                            end)
+                        end
+                    end
                 end
+                task.wait(0.2) -- Скорость стрельбы
             end
         end)
     else
         toggleBtn.Text = "OFF"
         toggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        if aimConnection then
-            aimConnection:Disconnect()
-            aimConnection = nil
+        if shootTask then
+            task.cancel(shootTask)
+            shootTask = nil
         end
     end
 end)
