@@ -2,7 +2,7 @@ local player = game.Players.LocalPlayer
 local workspace = game:GetService("Workspace")
 
 local gui = Instance.new("ScreenGui")
-gui.Name = "BoneZoneSpam"
+gui.Name = "BoneCarpet"
 gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
@@ -19,7 +19,7 @@ frame.Parent = gui
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0.3, 0)
 title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-title.Text = "Bone Zone Spam | olliE"
+title.Text = "Bone Carpet | olliE"
 title.TextColor3 = Color3.fromRGB(0, 255, 255)
 title.Font = Enum.Font.Code
 title.TextSize = 14
@@ -73,21 +73,19 @@ toggleBtn.MouseButton1Click:Connect(function()
                         if tool and tool.Parent == char then
                             local remote = tool:FindFirstChild("RemoteEvent")
                             if remote then
-                                pcall(function()
-                                    -- Пытаемся отправить координаты босса
-                                    remote:FireServer(hrp.Position.X, hrp.Position.Y, hrp.Position.Z)
-                                end)
+                                -- Спавним 5 зон с небольшим разбросом вокруг босса
+                                for i = 1, 5 do
+                                    local offset = Vector3.new(math.random(-5, 5), 0, math.random(-5, 5))
+                                    local spawnPos = hrp.Position + offset
+                                    pcall(function()
+                                        remote:FireServer(spawnPos.X, spawnPos.Y, spawnPos.Z)
+                                    end)
+                                end
                             end
-                            -- Если ремоута нет, просто активируем инструмент, пока камера смотрит на босса
-                            local camera = workspace.CurrentCamera
-                            camera.CFrame = CFrame.new(camera.CFrame.Position, hrp.Position)
-                            pcall(function()
-                                tool:Activate()
-                            end)
                         end
                     end
                 end
-                task.wait(0.2)
+                task.wait(0.1) -- Частота ковровых бомбардировок
             end
         end)
     else
