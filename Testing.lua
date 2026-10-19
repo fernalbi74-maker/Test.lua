@@ -2,7 +2,7 @@ local player = game.Players.LocalPlayer
 local workspace = game:GetService("Workspace")
 
 local gui = Instance.new("ScreenGui")
-gui.Name = "CooldownBypass"
+gui.Name = "ComboAttack"
 gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
@@ -19,7 +19,7 @@ frame.Parent = gui
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0.3, 0)
 title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-title.Text = "Cooldown Bypass | olliE"
+title.Text = "Combo Attack | olliE"
 title.TextColor3 = Color3.fromRGB(0, 255, 255)
 title.Font = Enum.Font.Code
 title.TextSize = 14
@@ -35,7 +35,7 @@ toggleBtn.Font = Enum.Font.Code
 toggleBtn.TextSize = 16
 toggleBtn.Parent = frame
 
-local isSpamming = false
+local isRunning = false
 
 local function getBoss()
     local char = player.Character
@@ -51,38 +51,49 @@ local function getBoss()
 end
 
 toggleBtn.MouseButton1Click:Connect(function()
-    isSpamming = not isSpamming
-    if isSpamming then
+    isRunning = not isRunning
+    if isRunning then
         toggleBtn.Text = "ON"
         toggleBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
         
         task.spawn(function()
-            while isSpamming do
+            while isRunning do
                 local boss = getBoss()
                 if boss then
                     local hrp = boss:FindFirstChild("HumanoidRootPart")
                     if hrp then
                         local char = player.Character
-                        local tool = char and char:FindFirstChild("Bone Zone")
-                        if not tool then
-                            local backpack = player:FindFirstChild("Backpack")
-                            tool = backpack and backpack:FindFirstChild("Bone Zone")
-                            if tool then tool.Parent = char end
+                        local backpack = player:FindFirstChild("Backpack")
+                        
+                        -- Собираем все инструменты атаки
+                        local tools = {}
+                        if char then
+                            for _, t in ipairs(char:GetChildren()) do
+                                if t:IsA("Tool") then table.insert(tools, t) end
+                            end
+                        end
+                        if backpack then
+                            for _, t in ipairs(backpack:GetChildren()) do
+                                if t:IsA("Tool") then table.insert(tools, t) end
+                            end
                         end
                         
-                        if tool and tool.Parent == char then
-                            -- Находим RemoteEvent внутри Bone Zone
-                            local remote = tool:FindFirstChild("RemoteEvent")
-                            if remote then
-                                -- Отправляем координаты напрямую (обходим LocalScript с кулдауном)
+                        -- Активируем по очереди
+                        for _, tool in ipairs(tools) do
+                            if tool.Name:lower():find("bone") or tool.Name:lower():find("blaster") or tool.Name:lower():find("attack") then
+                                if tool.Parent ~= char then tool.Parent = char end
                                 pcall(function()
-                                    remote:FireServer(hrp.Position.X, hrp.Position.Y, hrp.Position.Z)
+                                    -- Наводим камеру
+                                    workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, hrp.Position)
+                                    -- Жмем
+                                    tool:Activate()
                                 end)
+                                task.wait(0.2) -- Задержка между разными инструментами
                             end
                         end
                     end
                 end
-                task.wait(0.15) -- Пытаемся стрелять быстрее кулдауна
+                task.wait(0.1)
             end
         end)
     else
